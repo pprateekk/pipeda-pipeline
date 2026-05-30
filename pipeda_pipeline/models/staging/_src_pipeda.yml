@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: raw
+    database: pipeda_db
+    schema: raw
+    tables:
+      - name: consent_events
+        description: "Raw consent events data ingested."
+      - name: dsr_requests
+        description: "Raw DSR requests data ingested."
