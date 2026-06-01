@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: stg_consent_events
+    config:
+      materialized: view
+    description: "Staging model for consent events data."
+    columns:
+      - name: event_id
+        tests:
+          - not_null
+          - unique
+      - name: event_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['consent_granted', 'consent_revoked', 'consent_updated']
+      - name: purpose
+        tests:
+          - not_null
+  
+  - name: stg_dsr_requests
+    config:
+      materialized: view
+    description: "Staging model for DSR requests data."
+    columns:
+      - name: request_id
+        tests:
+          - not_null
+          - unique
+      - name: status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['open', 'in_progress', 'resolved', 'rejected']
+  
+  - name: stg_policy_versions
+    config:
+      materialized: view
+    description: "Staging model for policy versions data."
+    columns:
+      - name: policy_version_id
+        tests:
+          - not_null
+          - unique
+      
