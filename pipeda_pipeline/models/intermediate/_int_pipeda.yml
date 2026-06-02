@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: int_consent_lifecycle
+    config:
+      materialized: table
+    description: "Every consent event with the policy version active at the time of the event."
+    columns:
+      - name: event_id
+        tests:
+          - not_null
+          - unique
+      - name: policy_version_at_consent
+        tests:
+          - not_null
