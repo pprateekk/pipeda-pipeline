@@ -13,3 +13,18 @@ models:
       - name: policy_version_at_consent
         tests:
           - not_null
+
+  - name: int_dsr_sla_tracking
+    config:
+      materialized: table
+    description: "DSR requests w SLA breach status and days until deadline"
+    columns:
+      - name: request_id
+        tests:
+          - not_null
+          - unique
+      - name: sla_status
+        tests:
+          - accepted_values:
+              values: ['breached', 'critical', 'warning', 'on_track']
+              
