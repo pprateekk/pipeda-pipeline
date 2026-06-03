@@ -8,7 +8,7 @@ with latest_consent as (
         --most recent event per user+purpose, 
         row_number() over (partition by user_id, purpose order by event_timestamp_utc desc) as rn
     from {{ ref('int_consent_lifecycle') }}
-),f
+),
 
 current_consent as (
     select 
