@@ -13,7 +13,15 @@ REQUEST_TYPES = ['access', 'correction', 'withdraw']
 STATUSES = ['open', 'in_progress', 'resolved', 'rejected']
 
 def generate_dsr_requests(n=500):
-    user_ids = [uuid.uuid4() for _ in range(500)]
+    conn = psycopg2.connect(
+        host=os.getenv('DB_HOST'), port=os.getenv('DB_PORT'),
+        dbname=os.getenv('DB_NAME'), user=os.getenv('DB_USER'),
+        password=os.getenv('DB_PASSWORD')
+    )
+    user_ids = get_existing_user_ids(conn)  #pull real users
+    conn.close()
+
+    # user_ids = [uuid.uuid4() for _ in range(500)]
     requests = []
     now = datetime.now(tz=timezone.utc)
 
@@ -67,6 +75,13 @@ def load_requests(requests):
     cur.close()
     conn.close()
     print(f"Loaded{len(requests)} DSR requests, including 20 deliberate SLA breaches")
+
+def get_existing_user_ids(conn):
+    cur = conn.cursor()
+    cur.execute("SELECT DISTINCT user_id FROM raw.consent_events")
+    rows = cur.fetchall()
+    cur.close()
+    return [row[0] for row in rows]
 
 if __name__ == '__main__':
     requests = generate_dsr_requests(500)
