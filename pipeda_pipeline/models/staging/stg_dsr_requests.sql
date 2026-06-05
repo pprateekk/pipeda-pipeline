@@ -13,7 +13,8 @@ cleaned as (
         
         extract (day from now() - submitted_at) as days_since_submission, --calculate the number of days since the request was submitted
 
-        case when resolved_at is null then true else false end as is_open --check if the request is still open
+        -- case when resolved_at is null then true else false end as is_open --check if the request is still open
+        case when status in ('open', 'in_progress') then true else false end as is_open --check if the request is still open based on status
 
         from source
 )
