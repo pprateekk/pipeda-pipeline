@@ -23,6 +23,34 @@ def ingest_raw_data():
     subprocess.run(["python", "../../scripts/gen_dsr_requests.py"], check=True)
     print("Raw data ingested successfully.")
 
+#function to check for SLA breaches and push results to XCom for alerting
+def check_sla_breaches(**context):
+    conn = psycopg2.connect(
+        dbname=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT"),
+    )
+
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT user_id, breached_dsr_count, days_until_next_breach
+        FROM dbt_dev.marts_pipeda_compliance_report
+        WHERE breached_dsr_count > 0
+        ORDER BY days_until_next_breach
+        """)
+    breaches = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    if breaches:
+        context['ti'].xcom_push(key='breaches', value=breaches)
+        print(f"{len(breaches)} users with SLA breaches found.")
+        return True #ShortCircuitOperator will continue to next task = ALERT
+    else:
+        print("No SLA breaches found.")
+        return False #ShortCircuitOperator will skip next task
 
 #DAG def
 default_args = {
