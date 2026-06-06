@@ -52,6 +52,16 @@ def check_sla_breaches(**context):
         print("No SLA breaches found.")
         return False #ShortCircuitOperator will skip next task
 
+def send_sla_alert(**context):
+    breaches = context['ti'].xcom_pull(key='breaches', task_ids='check_sla_breaches')
+    print("PIPEDA SLA Breach Alert:")
+    print(f"Run date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("User info: ")
+    for user_id, breach_count, days_until in breaches:
+        print(f"ALERT: User {user_id} has {breach_count} breached DSRs. Next breach in {days_until} days.")
+    
+    #add code here to send email or Slack alert with breach details
+
 #DAG def
 default_args = {
     'owner': 'pipeda_team',
@@ -83,4 +93,16 @@ with DAG(
         schedule_interval=None,
     )
 
-    ingest >> dbt_run
+    check_breaches = ShortCircuitOperator(
+        task_id='check_sla_breaches',
+        python_callable=check_sla_breaches,
+        provide_context=True,
+    )
+
+    alert = PythonOperator(
+        task_id='send_sla_alert',
+        python_callable=send_sla_alert,
+        provide_context=True,
+    )
+
+    ingest >> dbt_run >> check_breaches >> alert
