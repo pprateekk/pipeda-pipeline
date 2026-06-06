@@ -1,0 +1,17 @@
+services:
+  api-server:
+    volumes:
+      - /Users/prateek/Documents/Projects/pipeda-pipeline/pipeda_pipeline:/usr/local/airflow/include/pipeda_pipeline
+      - /Users/prateek/Documents/Projects/pipeda-pipeline/scripts:/usr/local/airflow/include/scripts
+  scheduler:
+    volumes:
+      - /Users/prateek/Documents/Projects/pipeda-pipeline/pipeda_pipeline:/usr/local/airflow/include/pipeda_pipeline
+      - /Users/prateek/Documents/Projects/pipeda-pipeline/scripts:/usr/local/airflow/include/scripts
+  dag-processor:
+    volumes:
+      - /Users/prateek/Documents/Projects/pipeda-pipeline/pipeda_pipeline:/usr/local/airflow/include/pipeda_pipeline
+      - /Users/prateek/Documents/Projects/pipeda-pipeline/scripts:/usr/local/airflow/include/scripts
+  triggerer:
+    volumes:
+      - /Users/prateek/Documents/Projects/pipeda-pipeline/pipeda_pipeline:/usr/local/airflow/include/pipeda_pipeline
+      - /Users/prateek/Documents/Projects/pipeda-pipeline/scripts:/usr/local/airflow/include/scripts

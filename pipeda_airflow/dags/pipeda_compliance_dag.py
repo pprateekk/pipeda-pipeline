@@ -2,10 +2,14 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator, ShortCircuitOperator
 from airflow.operators.empty import EmptyOperator
-from cosmos import dbtDag, ProjectConfig, ProfileConfig, ExecutionConfig
+from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig
 from cosmos.profiles import PostgresUserPasswordProfileMapping
 import psycopg2
 import os
+from pathlib import Path
+
+SCRIPTS_DIR = Path("/usr/local/airflow/include/scripts")
+DBT_PROJECT_PATH = Path("/usr/local/airflow/include/pipeda_pipeline")
 
 #config postgres db via cosmos
 profile_config = ProfileConfig(
@@ -19,8 +23,8 @@ profile_config = ProfileConfig(
 
 def ingest_raw_data():
     import subprocess
-    subprocess.run(["python", "../../scripts/gen_consent_events.py"], check=True)
-    subprocess.run(["python", "../../scripts/gen_dsr_requests.py"], check=True)
+    subprocess.run(["python", str(SCRIPTS_DIR / "gen_consent_events.py")], check=True)
+    subprocess.run(["python", str(SCRIPTS_DIR / "gen_dsr_requests.py")], check=True)
     print("Raw data ingested successfully.")
 
 #function to check for SLA breaches and push results to XCom for alerting
@@ -74,7 +78,7 @@ with DAG(
     dag_id='pipeda_compliance_pipeline',
     default_args=default_args,
     description='daily PIPEDA consent audit pipeline',
-    schedule_interval='@daily',
+    schedule='@daily',
     start_date=datetime(2024, 1, 1),
     catchup=False,
     tags = ['pipeda', 'compliance', 'audit', 'dbt'],
@@ -86,23 +90,26 @@ with DAG(
     )
 
     #cosmos dbt operator to run dbt models after data ingestion
-    dbt_run = DbtDag(
-        project_config = ProjectConfig("../../pipeda_pipeline"),
-        profile_config = profile_config,
-        dag_id="pipeda_dbt", 
-        schedule_interval=None,
+    dbt_run = DbtTaskGroup(
+        group_id="dbt_pipeda",
+        project_config=ProjectConfig(dbt_project_path=DBT_PROJECT_PATH),
+        profile_config=profile_config,
     )
+    # dbt_run = DbtDag(
+    #     project_config = ProjectConfig(dbt_project_path=DBT_PROJECT_PATH),
+    #     profile_config = profile_config,
+    #     dag_id="pipeda_dbt", 
+    #     schedule=None,
+    # )
 
     check_breaches = ShortCircuitOperator(
         task_id='check_sla_breaches',
         python_callable=check_sla_breaches,
-        provide_context=True,
     )
 
     alert = PythonOperator(
         task_id='send_sla_alert',
         python_callable=send_sla_alert,
-        provide_context=True,
     )
 
     ingest >> dbt_run >> check_breaches >> alert
