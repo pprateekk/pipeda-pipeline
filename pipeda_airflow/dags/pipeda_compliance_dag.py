@@ -38,11 +38,19 @@ def check_sla_breaches(**context):
     )
 
     cur = conn.cursor()
+    # cur.execute("""
+    #     SELECT user_id, breached_dsr_count, days_until_next_breach
+    #     FROM dbt_dev.marts_pipeda_compliance_report
+    #     WHERE breached_dsr_count > 0
+    #     ORDER BY days_until_next_breach
+    #     """)
     cur.execute("""
-        SELECT user_id, breached_dsr_count, days_until_next_breach
-        FROM dbt_dev.marts_pipeda_compliance_report
-        WHERE breached_dsr_count > 0
-        ORDER BY days_until_next_breach
+        SELECT
+            user_id,
+            days_until_breach
+        FROM dbt_dev.int_dsr_sla_tracking
+        WHERE is_open = true AND is_sla_breached = true
+        ORDER BY days_until_breach ASC;
         """)
     breaches = cur.fetchall()
     cur.close()
@@ -61,8 +69,8 @@ def send_sla_alert(**context):
     print("PIPEDA SLA Breach Alert:")
     print(f"Run date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("User info: ")
-    for user_id, breach_count, days_until in breaches:
-        print(f"ALERT: User {user_id} has {breach_count} breached DSRs. Next breach in {days_until} days.")
+    for user_id, days_until in breaches:
+        print(f"ALERT: User {user_id} has breached DSRs. Next breach in {days_until} days.")
     
     #add code here to send email or Slack alert with breach details
 
@@ -84,10 +92,10 @@ with DAG(
     tags = ['pipeda', 'compliance', 'audit', 'dbt'],
 ) as dag:
 
-    ingest = PythonOperator(
-        task_id='ingest_raw_data',
-        python_callable=ingest_raw_data,
-    )
+    # ingest = PythonOperator(
+    #     task_id='ingest_raw_data',
+    #     python_callable=ingest_raw_data,
+    # )
 
     #cosmos dbt operator to run dbt models after data ingestion
     dbt_run = DbtTaskGroup(
@@ -112,4 +120,6 @@ with DAG(
         python_callable=send_sla_alert,
     )
 
-    ingest >> dbt_run >> check_breaches >> alert
+    # ingest >> dbt_run >> check_breaches >> alert
+    dbt_run >> check_breaches >> alert
+
